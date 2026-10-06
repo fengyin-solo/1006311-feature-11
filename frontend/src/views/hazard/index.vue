@@ -2,8 +2,8 @@
   <section class="page" data-module="hazard">
     <header class="page-head">
       <div>
-        <h2>隐患整改管理管理</h2>
-        <p class="page-desc">维护隐患记录，围绕隐患编号、隐患部位、隐患等级、整改措施做登记、筛选与状态流转。</p>
+        <h2>隐患整改管理</h2>
+        <p class="page-desc">维护隐患记录，围绕隐患编号、隐患部位、隐患等级、整改措施做登记、筛选与状态流转；消防检测判「需维修」的结论自动回写本台账挂出待整改，验收通过后同步回填消防侧维修闭环。</p>
       </div>
       <div class="page-actions">
         <button class="btn primary" type="button" @click="openCreate">登记隐患记录</button>
@@ -43,7 +43,10 @@
       </thead>
       <tbody>
         <tr v-for="row in rows" :key="String(row.id)">
-          <td v-for="column in columns" :key="column">{{ row[column] ?? '—' }}</td>
+          <td v-for="column in columns" :key="column">
+            {{ row[column] ?? '—' }}
+            <em v-if="column === '整改状态' && row['来源设施']" class="source-tag">消防检测回写</em>
+          </td>
           <td>{{ row.status }}</td>
           <td class="row-actions">
             <button
@@ -77,15 +80,14 @@ import {
   downloadEntries,
   listEntries,
   moduleMeta,
-  runAction as applyAction,
+  submitAction as applyAction,
 } from '@/api/local-service'
 import type { EntryRow } from '@/data/types'
 
 const meta = moduleMeta('hazard')
-const columns = ["隐患编号", "隐患部位", "隐患等级", "整改措施", "责任人员", "发现日期", "整改期限", "整改状态"]
-const actions = ["派发整改", "提交验收", "标记逾期"]
-const statuses = ["待整改", "整改中", "已验收", "已逾期"]
-const stats = [{"label": "待整改隐患", "value": 0}, {"label": "整改中隐患", "value": 0}, {"label": "已逾期隐患", "value": 0}]
+const columns = meta.fields
+const actions = meta.actions
+const statuses = meta.statuses
 
 const rows = ref<EntryRow[]>([])
 const total = ref(0)
@@ -98,6 +100,11 @@ const statusSummary = computed(() =>
     count: rows.value.filter((row) => String(row.status) === status).length,
   })),
 )
+const stats = computed(() => [
+  { label: '待整改隐患', value: rows.value.filter((row) => String(row.status) === '待整改').length },
+  { label: '整改中隐患', value: rows.value.filter((row) => String(row.status) === '整改中').length },
+  { label: '已逾期隐患', value: rows.value.filter((row) => String(row.status) === '已逾期').length },
+])
 
 function resetFilters() {
   filters.value = {}
@@ -112,9 +119,9 @@ function openCreate() {
   errorMessage.value = '隐患记录登记入口尚未接入审批流'
 }
 
-function runAction(action: string, row: EntryRow) {
+async function runAction(action: string, row: EntryRow) {
   errorMessage.value = ''
-  const result = applyAction(meta.key, Number(row.id), action)
+  const result = await applyAction(meta.key, Number(row.id), action)
   if (!result.ok) {
     errorMessage.value = result.message
     return
@@ -135,3 +142,15 @@ function reload() {
 
 onMounted(reload)
 </script>
+
+<style scoped>
+.source-tag {
+  font-style: normal;
+  font-size: 12px;
+  color: #b42318;
+  background: #fef3f2;
+  border-radius: 999px;
+  padding: 1px 8px;
+  margin-left: 6px;
+}
+</style>

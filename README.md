@@ -47,7 +47,7 @@ npm run build
 | 廊内环境监测 | `envmonitor` | 环境监测记录 | 监测编号、监测点位、环境温度 |
 | 通风系统运维 | `ventilation` | 通风机组 | 机组编号、所属舱室、风机型号 |
 | 廊内排水运维 | `drainage` | 排水泵坑 | 泵坑编号、所属舱室、集水坑容积 |
-| 消防系统运维 | `firecontrol` | 消防设施 | 设施编号、所属舱室、消防类型 |
+| 消防系统运维 | `firecontrol` | 消防设施 | 设施编号、所属舱室、消防类型、探测器数量、下次检测日 |
 | 廊内照明运维 | `lighting` | 照明灯具 | 灯具编号、所属舱室、灯具类型 |
 | 门禁安防运维 | `access` | 安防点位 | 点位编号、所属出入口、门禁类型 |
 | 廊内巡检任务 | `patrol` | 巡检任务 | 巡检编号、巡检路线、巡检班组 |
@@ -68,4 +68,10 @@ npm run build
 - 字段、状态、动作与流转目标集中在 `frontend/src/data/modules.ts`；示例数据在
   `frontend/src/data/seed.ts`。
 - 状态流转只允许在 `local-service.ts` 里改，页面组件不做业务判断。
+- 消防模块是单向链路（待检测→检测中→状态正常/需维修→归档）：只能逐档前进，跳档当场驳回
+  并写明缺步；需维修结论自动回写隐患整改台账，验收通过回写维修闭环并归档；归档不可退。
+  存量回填、历史取值对齐、扫描件建账与导入对账口径见
+  [`frontend/docs/firecontrol-lifecycle.md`](frontend/docs/firecontrol-lifecycle.md)。
+- 首次读到旧版数据会自动跑一次存量迁移（localStorage 记录 schema 版本）；规则验证脚本：
+  `cd frontend && npx tsx scripts/verify-firecontrol.ts`。
 - 想回到初始数据：清掉浏览器里 `urban-utility-tunnel:entries` 这一项，或调用 `resetModule(模块)`。
